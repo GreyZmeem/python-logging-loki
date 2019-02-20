@@ -1,0 +1,8 @@
+[tool.black]
+line-length = 120
+py36 = true
+exclude = '''
+/(
+  \.git
+)/
+'''

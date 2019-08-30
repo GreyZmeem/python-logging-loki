@@ -64,7 +64,7 @@ class LokiHandler(logging.Handler):
         # noinspection PyBroadException
         try:
             labels = self.build_labels(record)
-            ts = rfc3339.format(record.created)
+            ts = rfc3339.format_microsecond(record.created)
             line = self.format(record)
             payload = {"streams": [{"labels": labels, "entries": [{"ts": ts, "line": line}]}]}
             resp = self.session.post(self.url, json=payload)

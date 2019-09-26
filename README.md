@@ -23,7 +23,7 @@ import logging_loki
 
 
 handler = logging_loki.LokiHandler(
-    url="https://my-loki-instnace/api/prom/push", 
+    url="https://my-loki-instance/api/prom/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),    
 )

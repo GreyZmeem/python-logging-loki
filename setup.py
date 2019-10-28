@@ -15,7 +15,7 @@ setuptools.setup(
     url="https://github.com/greyzmeem/python-logging-loki",
     packages=setuptools.find_packages(),
     python_requires=">=3.5",
-    install_requires=["rfc3339>=6.1", "requests"],
+    install_requires=["requests"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

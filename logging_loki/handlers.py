@@ -4,7 +4,6 @@ from queue import Queue
 from typing import Optional, Tuple, Dict, Any
 
 import requests
-import rfc3339
 
 BasicAuth = Optional[Tuple[str, str]]
 
@@ -63,23 +62,16 @@ class LokiHandler(logging.Handler):
         """
         # noinspection PyBroadException
         try:
-            labels = self.build_labels(record)
-            ts = rfc3339.format_microsecond(record.created)
+            ts = str(int(record.created * 1e9))
             line = self.format(record)
-            payload = {"streams": [{"labels": labels, "entries": [{"ts": ts, "line": line}]}]}
+            payload = {
+                "streams": [{"labels": self.build_tags(), "entries": [[ts, line]]}]
+            }
             resp = self.session.post(self.url, json=payload)
             if resp.status_code != 204:
                 raise ValueError("Unexpected Loki API response status code: %s" % resp.status_code)
         except Exception:
             self.handleError(record)
-
-    def build_labels(self, record: logging.LogRecord) -> str:
-        """
-        Return Loki labels string.
-        """
-        tags = self.build_tags(record)
-        labels = ",".join(['%s="%s"' % (k, str(v).replace('"', '\\"')) for k, v in tags.items()])
-        return "{%s}" % labels
 
     def build_tags(self, record: logging.LogRecord) -> Dict[str, Any]:
         """

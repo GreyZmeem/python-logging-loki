@@ -1,0 +1,8 @@
+language: python
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+dist: xenial
+install: pip install tox tox-venv tox-travis
+script: tox

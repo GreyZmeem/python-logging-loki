@@ -2,8 +2,9 @@ python-logging-loki
 ===================
 
 [![PyPI version](https://img.shields.io/pypi/v/python-logging-loki.svg)](https://pypi.org/project/python-logging-loki/)
-[![Python version](https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7-blue.svg)](https://www.python.org/)
+[![Python version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/pypi/l/python-logging-loki.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://travis-ci.org/GreyZmeem/python-logging-loki.svg?branch=master)](https://travis-ci.org/GreyZmeem/python-logging-loki)
 
 Python logging handler for Loki.  
 https://grafana.com/loki
@@ -23,7 +24,7 @@ import logging_loki
 
 
 handler = logging_loki.LokiHandler(
-    url="https://my-loki-instance/api/prom/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),    
 )
@@ -54,7 +55,7 @@ from queue import Queue
 queue = Queue(-1)
 handler = logging.handlers.QueueHandler(queue)
 handler_loki = logging_loki.LokiHandler(
-    url="https://my-loki-instance/api/prom/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),    
 )
@@ -75,7 +76,7 @@ from queue import Queue
 
 handler = logging_loki.LokiQueueHandler(
     Queue(-1),
-    url="https://my-loki-instance/api/prom/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),
 )

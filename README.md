@@ -24,7 +24,7 @@ import logging_loki
 
 
 handler = logging_loki.LokiHandler(
-    url="https://my-loki-instnace/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),    
 )
@@ -55,7 +55,7 @@ from queue import Queue
 queue = Queue(-1)
 handler = logging.handlers.QueueHandler(queue)
 handler_loki = logging_loki.LokiHandler(
-    url="https://my-loki-instnace/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),    
 )
@@ -76,7 +76,7 @@ from queue import Queue
 
 handler = logging_loki.LokiQueueHandler(
     Queue(-1),
-    url="https://my-loki-instnace/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),
 )

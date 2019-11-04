@@ -15,7 +15,7 @@ setuptools.setup(
     author="Andrey Maslov",
     author_email="greyzmeem@gmail.com",
     url="https://github.com/greyzmeem/python-logging-loki",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=("tests",)),
     python_requires=">=3.6",
     install_requires=["rfc3339>=6.1", "requests"],
     classifiers=[

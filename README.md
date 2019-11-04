@@ -26,7 +26,8 @@ import logging_loki
 handler = logging_loki.LokiHandler(
     url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
-    auth=("username", "password"),    
+    auth=("username", "password"),
+    version="1",
 )
 
 logger = logging.getLogger("my-logger")
@@ -49,7 +50,7 @@ But you can use the built-in `QueueHandler` and` QueueListener` to send messages
 ```python
 import logging.handlers
 import logging_loki
-from queue import Queue
+from multiprocessing import Queue
 
 
 queue = Queue(-1)
@@ -57,7 +58,8 @@ handler = logging.handlers.QueueHandler(queue)
 handler_loki = logging_loki.LokiHandler(
     url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
-    auth=("username", "password"),    
+    auth=("username", "password"),
+    version="1",
 )
 logging.handlers.QueueListener(queue, handler_loki)
 
@@ -71,7 +73,7 @@ Or you can use `LokiQueueHandler` shortcut, which will automatically create list
 ```python
 import logging.handlers
 import logging_loki
-from queue import Queue
+from multiprocessing import Queue
 
 
 handler = logging_loki.LokiQueueHandler(
@@ -79,6 +81,7 @@ handler = logging_loki.LokiQueueHandler(
     url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
     auth=("username", "password"),
+    version="1",
 )
 
 logger = logging.getLogger("my-logger")

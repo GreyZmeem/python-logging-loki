@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from logging.config import dictConfig as loggingDictConfig
+from queue import Queue
 from typing import Tuple
 from unittest.mock import MagicMock
 
@@ -151,3 +153,26 @@ def test_session_is_closed(emitter_v1):
     emitter.close()
     session().close.assert_called_once()
     assert emitter._session is None  # noqa: WPS437
+
+
+def test_can_build_tags_from_converting_dict(emitter_v1):
+    logger_name = "converting_dict_tags_v1"
+    config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            logger_name: {
+                "class": "logging_loki.LokiQueueHandler",
+                "queue": Queue(-1),
+                "url": emitter_url,
+                "tags": {"test": "test"},
+                "version": "1",
+            },
+        },
+        "loggers": {logger_name: {"handlers": [logger_name], "level": "DEBUG"}},
+    }
+    loggingDictConfig(config)
+
+    logger = logging.getLogger(logger_name)
+    emitter: LokiEmitterV1 = logger.handlers[0].handler.emitter
+    emitter.build_tags(create_record())

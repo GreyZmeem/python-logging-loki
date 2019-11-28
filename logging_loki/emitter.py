@@ -5,6 +5,7 @@ import copy
 import functools
 import logging
 import time
+from logging.config import ConvertingDict
 from typing import Any
 from typing import Dict
 from typing import List
@@ -87,7 +88,8 @@ class LokiEmitter(abc.ABC):
 
     def build_tags(self, record: logging.LogRecord) -> Dict[str, Any]:
         """Return tags that must be send to Loki with a log record."""
-        tags = copy.deepcopy(self.tags)
+        tags = dict(self.tags) if isinstance(self.tags, ConvertingDict) else self.tags
+        tags = copy.deepcopy(tags)
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
 

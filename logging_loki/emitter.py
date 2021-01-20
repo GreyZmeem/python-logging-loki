@@ -30,7 +30,7 @@ class LokiEmitter(abc.ABC):
     label_replace_with = const.label_replace_with
     session_class = requests.Session
 
-    def __init__(self, url: str, tags: Optional[dict] = None, auth: BasicAuth = None):
+    def __init__(self, url: str, tags: Optional[dict] = None, headers: Optional[dict] = None, auth: BasicAuth = None):
         """
         Create new Loki emitter.
 
@@ -42,6 +42,8 @@ class LokiEmitter(abc.ABC):
         """
         #: Tags that will be added to all records handled by this handler.
         self.tags = tags or {}
+        #: Headers that will be added to all requests handled by this emitter.
+        self.headers = headers or {}
         #: Loki JSON push endpoint (e.g `http://127.0.0.1/loki/api/v1/push`)
         self.url = url
         #: Optional tuple with username and password for basic authentication.
@@ -52,7 +54,7 @@ class LokiEmitter(abc.ABC):
     def __call__(self, record: logging.LogRecord, line: str):
         """Send log record to Loki."""
         payload = self.build_payload(record, line)
-        resp = self.session.post(self.url, json=payload)
+        resp = self.session.post(self.url, json=payload, headers=self.headers)
         if resp.status_code != self.success_response_code:
             raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
 

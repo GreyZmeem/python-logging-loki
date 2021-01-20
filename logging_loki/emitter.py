@@ -54,7 +54,7 @@ class LokiEmitter(abc.ABC):
         payload = self.build_payload(record, line)
         resp = self.session.post(self.url, json=payload)
         if resp.status_code != self.success_response_code:
-            raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+            raise ValueError("Unexpected Loki API response status code ({0}): {1}".format(resp.status_code, resp.text))
 
     @abc.abstractmethod
     def build_payload(self, record: logging.LogRecord, line) -> dict:

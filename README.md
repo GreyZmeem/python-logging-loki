@@ -26,6 +26,7 @@ import logging_loki
 handler = logging_loki.LokiHandler(
     url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
+    headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
     version="1",
 )
@@ -58,6 +59,7 @@ handler = logging.handlers.QueueHandler(queue)
 handler_loki = logging_loki.LokiHandler(
     url="https://my-loki-instance/loki/api/v1/push", 
     tags={"application": "my-app"},
+    headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
     version="1",
 )

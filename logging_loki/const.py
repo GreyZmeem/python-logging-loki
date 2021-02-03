@@ -12,7 +12,7 @@ format_label_lru_size: int = 256
 success_response_code: int = 204
 
 #: Label name indicating logging level.
-level_tag: str = "severity"
+level_tag: str = "level"
 #: Label name indicating logger name.
 logger_tag: str = "logger"
 

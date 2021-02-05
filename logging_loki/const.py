@@ -13,6 +13,8 @@ success_response_code: int = 204
 
 #: Label name indicating logging level.
 level_tag: str = "level"
+#: Label name indicating severity.
+severity_tag: str = "severity"
 #: Label name indicating logger name.
 logger_tag: str = "logger"
 

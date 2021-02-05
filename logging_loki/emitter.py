@@ -25,6 +25,7 @@ class LokiEmitter(abc.ABC):
 
     success_response_code = const.success_response_code
     level_tag = const.level_tag
+    severity_tag = const.severity_tag
     logger_tag = const.logger_tag
     label_allowed_chars = const.label_allowed_chars
     label_replace_with = const.label_replace_with
@@ -91,6 +92,7 @@ class LokiEmitter(abc.ABC):
         tags = dict(self.tags) if isinstance(self.tags, ConvertingDict) else self.tags
         tags = copy.deepcopy(tags)
         tags[self.level_tag] = record.levelname.lower()
+        tags[self.severity_tag] = tags[self.level_tag]
         tags[self.logger_tag] = record.name
 
         extra_tags = getattr(record, "tags", {})

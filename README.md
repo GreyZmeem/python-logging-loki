@@ -45,7 +45,7 @@ Example above will send `Something happened` message along with these labels:
 - Labels from `tags` item of `extra` dict
 
 The given example is blocking (i.e. each call will wait for the message to be sent).  
-But you can use the built-in `QueueHandler` and` QueueListener` to send messages in a separate thread.  
+But you can use the built-in `QueueHandler` and `QueueListener` to send messages in a separate thread.  
 
 ```python
 import logging.handlers

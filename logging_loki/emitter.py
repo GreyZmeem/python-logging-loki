@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import collections
 import copy
 import functools
 import logging
 import time
 from logging.config import ConvertingDict
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 
@@ -105,9 +102,8 @@ class LokiEmitter(abc.ABC):
 
         return tags
 
-class LokiSimpleEmitter(LokiEmitter):
-    """Emitter for Loki >= 0.4.0."""
 
+class LokiSimpleEmitter(LokiEmitter):
     def build_payload(self, record: logging.LogRecord, line) -> dict:
         """Build JSON payload with a log entry."""
         labels = self.build_tags(record)
@@ -119,3 +115,37 @@ class LokiSimpleEmitter(LokiEmitter):
         }
         return {"streams": [stream]}
 
+# TODO: Make it configurable 
+EXPORT_MIN_SIZE = 10
+
+buffer = collections.deque([])
+
+
+class LokiBatchEmitter(LokiEmitter):
+    def __call__(self, record: logging.LogRecord, line: str):
+        """Send log record to Loki."""
+        payload = self.build_payload(record, line)
+        if len(buffer) < EXPORT_MIN_SIZE:
+            buffer.appendleft(payload["streams"][0])
+        else:
+            resp = self.session.post(
+                self.url,
+                json={"streams": [buffer.pop() for _ in range(EXPORT_MIN_SIZE)]},
+            )
+            if resp.status_code != self.success_response_code:
+                raise ValueError(
+                    "Unexpected Loki API response status code: {0}".format(
+                        resp.status_code
+                    )
+                )
+
+    def build_payload(self, record: logging.LogRecord, line) -> dict:
+        """Build JSON payload with a log entry."""
+        labels = self.build_tags(record)
+        ns = 1e9
+        ts = str(int(time.time() * ns))
+        stream = {
+            "stream": labels,
+            "values": [[ts, line]],
+        }
+        return {"streams": [stream]}

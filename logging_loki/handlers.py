@@ -31,17 +31,12 @@ class LokiHandler(logging.Handler):
     `Loki API <https://github.com/grafana/loki/blob/master/docs/api.md>`_
     """
 
-    emitters: Dict[str, Type[emitter.LokiEmitter]] = {
-        "0": emitter.LokiEmitterV0,
-        "1": emitter.LokiEmitterV1,
-    }
-
     def __init__(
         self,
         url: str,
         tags: Optional[dict] = None,
         auth: Optional[emitter.BasicAuth] = None,
-        version: Optional[str] = None,
+        emitter: emitter.LokiEmitter = emitter.LokiEmitter,
     ):
         """
         Create new Loki logging handler.
@@ -67,7 +62,7 @@ class LokiHandler(logging.Handler):
         version = version or const.emitter_ver
         if version not in self.emitters:
             raise ValueError("Unknown emitter version: {0}".format(version))
-        self.emitter = self.emitters[version](url, tags, auth)
+        self.emitter = emitter(url, tags, auth)
 
     def handleError(self, record):  # noqa: N802
         """Close emitter and let default handler take actions on error."""

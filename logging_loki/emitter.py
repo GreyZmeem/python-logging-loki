@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional, Tuple
 import requests
 
 from logging_loki import const
+from logging_loki.config import BATCH_EXPORT_MIN_SIZE
 
 BasicAuth = Optional[Tuple[str, str]]
 
@@ -49,6 +50,7 @@ class LokiEmitter(abc.ABC):
         """Send log record to Loki."""
         payload = self.build_payload(record, line)
         resp = self.session.post(self.url, json=payload)
+        # TODO: Enqueue logs instead of raise an error that lose the logs
         if resp.status_code != self.success_response_code:
             raise ValueError(
                 "Unexpected Loki API response status code: {0}".format(resp.status_code)
@@ -115,8 +117,6 @@ class LokiSimpleEmitter(LokiEmitter):
         }
         return {"streams": [stream]}
 
-# TODO: Make it configurable 
-EXPORT_MIN_SIZE = 10
 
 buffer = collections.deque([])
 
@@ -125,13 +125,14 @@ class LokiBatchEmitter(LokiEmitter):
     def __call__(self, record: logging.LogRecord, line: str):
         """Send log record to Loki."""
         payload = self.build_payload(record, line)
-        if len(buffer) < EXPORT_MIN_SIZE:
+        if len(buffer) < BATCH_EXPORT_MIN_SIZE:
             buffer.appendleft(payload["streams"][0])
         else:
             resp = self.session.post(
                 self.url,
-                json={"streams": [buffer.pop() for _ in range(EXPORT_MIN_SIZE)]},
+                json={"streams": [buffer.pop() for _ in range(BATCH_EXPORT_MIN_SIZE)]},
             )
+            # TODO: Enqueue logs instead of raise an error that lose the logs
             if resp.status_code != self.success_response_code:
                 raise ValueError(
                     "Unexpected Loki API response status code: {0}".format(

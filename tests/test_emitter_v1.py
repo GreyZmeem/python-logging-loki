@@ -126,7 +126,9 @@ def test_raises_value_error_on_non_successful_response(emitter_v1):
     session().post().status_code = None
     with pytest.raises(ValueError):
         emitter(create_record(), "")
-        pytest.fail("Must raise ValueError on non-successful Loki response")  # pragma: no cover
+        pytest.fail(
+            "Must raise ValueError on non-successful Loki response"
+        )  # pragma: no cover
 
 
 def test_logged_messaged_added_to_values(emitter_v1):
@@ -153,6 +155,7 @@ def test_session_is_closed(emitter_v1):
     emitter.close()
     session().close.assert_called_once()
     assert emitter._session is None  # noqa: WPS437
+
 
 @pytest.mark.skip
 def test_can_build_tags_from_converting_dict(emitter_v1):

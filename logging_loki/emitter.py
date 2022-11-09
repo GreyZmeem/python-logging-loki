@@ -118,21 +118,21 @@ class LokiSimpleEmitter(LokiEmitter):
         return {"streams": [stream]}
 
 
-buffer = collections.deque([])
-
-
 class LokiBatchEmitter(LokiEmitter):
+    buffer = collections.deque([])
+
     def __call__(self, record: logging.LogRecord, line: str):
         """Send log record to Loki."""
         payload = self.build_payload(record, line)
-        if len(buffer) < BATCH_EXPORT_MIN_SIZE:
-            buffer.appendleft(payload["streams"][0])
+        if len(self.buffer) < BATCH_EXPORT_MIN_SIZE:
+            self.buffer.appendleft(payload["streams"][0])
         else:
             resp = self.session.post(
                 self.url,
-                json={"streams": [buffer.pop() for _ in range(BATCH_EXPORT_MIN_SIZE)]},
+                json={
+                    "streams": [self.buffer.pop() for _ in range(BATCH_EXPORT_MIN_SIZE)]
+                },
             )
-            # TODO: Enqueue logs instead of raise an error that lose the logs
             if resp.status_code != self.success_response_code:
                 raise ValueError(
                     "Unexpected Loki API response status code: {0}".format(

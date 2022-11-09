@@ -36,7 +36,7 @@ class LokiHandler(logging.Handler):
         url: str,
         tags: Optional[dict] = None,
         auth: Optional[emitter.BasicAuth] = None,
-        emitter: emitter.LokiEmitter = emitter.LokiEmitter,
+        emitter: emitter.LokiEmitter = emitter.LokiSimpleEmitter,
     ):
         """
         Create new Loki logging handler.

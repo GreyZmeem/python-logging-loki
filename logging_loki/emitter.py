@@ -4,6 +4,7 @@ import abc
 import copy
 import functools
 import logging
+import threading
 import time
 from logging.config import ConvertingDict
 from typing import Any
@@ -50,13 +51,20 @@ class LokiEmitter(abc.ABC):
         self.auth = auth
 
         self._session: Optional[requests.Session] = None
+        self._lock = threading.Lock()
 
     def __call__(self, record: logging.LogRecord, line: str):
         """Send log record to Loki."""
-        payload = self.build_payload(record, line)
-        resp = self.session.post(self.url, json=payload, headers=self.headers)
-        if resp.status_code != self.success_response_code:
-            raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+        # Prevent "recursion" when e.g. urllib3 logs debug messages on POST
+        if not self._lock.acquire(blocking=False):
+            return
+        try:
+            payload = self.build_payload(record, line)
+            resp = self.session.post(self.url, json=payload, headers=self.headers)
+            if resp.status_code != self.success_response_code:
+                raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+        finally:
+            self._lock.release()
 
     @abc.abstractmethod
     def build_payload(self, record: logging.LogRecord, line) -> dict:

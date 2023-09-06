@@ -23,6 +23,8 @@ class LokiQueueHandler(QueueHandler):
         self.listener = QueueListener(self.queue, self.handler)
         self.listener.start()
 
+    def __del__(self):
+        self.listener.stop()
 
 class LokiHandler(logging.Handler):
     """

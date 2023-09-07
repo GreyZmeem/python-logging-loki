@@ -3,6 +3,7 @@
 import abc
 import copy
 import functools
+import json
 import logging
 import threading
 import time
@@ -31,7 +32,7 @@ class LokiEmitter(abc.ABC):
     label_replace_with = const.label_replace_with
     session_class = requests.Session
 
-    def __init__(self, url: str, tags: Optional[dict] = None, headers: Optional[dict] = None, auth: BasicAuth = None):
+    def __init__(self, url: str, tags: Optional[dict] = None, headers: Optional[dict] = None, auth: BasicAuth = None, as_json: bool = False):
         """
         Create new Loki emitter.
 
@@ -49,6 +50,8 @@ class LokiEmitter(abc.ABC):
         self.url = url
         #: Optional tuple with username and password for basic authentication.
         self.auth = auth
+        #: Optional bool, send record as json?
+        self.as_json = as_json
 
         self._session: Optional[requests.Session] = None
         self._lock = threading.Lock()
@@ -146,6 +149,9 @@ class LokiEmitterV1(LokiEmitter):
         labels = self.build_tags(record)
         ns = 1e9
         ts = str(int(time.time() * ns))
+
+        line = json.dumps(record, default=lambda obj: obj.__dict__) if self.as_json else line
+
         stream = {
             "stream": labels,
             "values": [[ts, line]],

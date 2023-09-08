@@ -32,7 +32,14 @@ class LokiEmitter(abc.ABC):
     label_replace_with = const.label_replace_with
     session_class = requests.Session
 
-    def __init__(self, url: str, tags: Optional[dict] = None, headers: Optional[dict] = None, auth: BasicAuth = None, as_json: bool = False):
+    def __init__(self, 
+        url: str, 
+        tags: Optional[dict] = None, 
+        headers: Optional[dict] = None, 
+        auth: BasicAuth = None, 
+        as_json: bool = False,
+        props_to_labels: Optional[list[str]] = None
+    ):
         """
         Create new Loki emitter.
 
@@ -52,6 +59,8 @@ class LokiEmitter(abc.ABC):
         self.auth = auth
         #: Optional bool, send record as json?
         self.as_json = as_json
+        #: Optional list, send record as json?
+        self.props_to_labels = props_to_labels or []
 
         self._session: Optional[requests.Session] = None
         self._lock = threading.Lock()
@@ -106,10 +115,11 @@ class LokiEmitter(abc.ABC):
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
 
-        extra_tags = getattr(record, "tags", {})
-        if not isinstance(extra_tags, dict):
-            return tags
+        extra_tags = {k: getattr(record, k) for k in self.props_to_labels if getattr(record, k)}
+        if isinstance(passed_tags := getattr(record, "tags", {}), dict):
+            extra_tags = extra_tags | passed_tags
 
+        
         for tag_name, tag_value in extra_tags.items():
             cleared_name = self.format_label(tag_name)
             if cleared_name:

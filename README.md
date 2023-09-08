@@ -29,6 +29,7 @@ handler = logging_loki.LokiHandler(
     headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
     version="1",
+    props_to_labels: Optional[list[str]] = ["foo"]
 )
 
 logger = logging.getLogger("my-logger")
@@ -62,6 +63,7 @@ handler_loki = logging_loki.LokiHandler(
     headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
     version="1",
+    props_to_labels: Optional[list[str]] = ["foo"]
 )
 logging.handlers.QueueListener(queue, handler_loki)
 

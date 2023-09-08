@@ -115,7 +115,7 @@ class LokiEmitter(abc.ABC):
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
 
-        extra_tags = {k: getattr(record, k) for k in self.props_to_labels if getattr(record, k)}
+        extra_tags = {k: getattr(record, k) for k in self.props_to_labels if getattr(record, k, None)}
         if isinstance(passed_tags := getattr(record, "tags", {}), dict):
             extra_tags = extra_tags | passed_tags
 

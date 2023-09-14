@@ -1,27 +1,39 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import warnings
-from logging.handlers import QueueHandler
+from logging.handlers import MemoryHandler, QueueHandler
 from logging.handlers import QueueListener
+import os
 from queue import Queue
-from typing import Dict
-from typing import Optional
-from typing import Type
+import time
+from typing import Optional, Union
 
-from logging_loki import const
-from logging_loki import emitter
+from logging_loki.emitter import BasicAuth, LokiEmitter
 
+LOKI_MAX_BATCH_BUFFER_SIZE = int(os.environ.get('LOKI_MAX_BATCH_BUFFER_SIZE', 10))
 
 class LokiQueueHandler(QueueHandler):
     """This handler automatically creates listener and `LokiHandler` to handle logs queue."""
 
-    def __init__(self, queue: Queue, **kwargs):
+    handler: Union['LokiBatchHandler', 'LokiHandler']
+
+    def __init__(self, queue: Queue, batch_interval: Optional[float] = None, **kwargs):
         """Create new logger handler with the specified queue and kwargs for the `LokiHandler`."""
         super().__init__(queue)
-        self.handler = LokiHandler(**kwargs)  # noqa: WPS110
+
+        loki_handler = LokiHandler(**kwargs)  # noqa: WPS110
+
+        if batch_interval:
+            self.handler = LokiBatchHandler(batch_interval, target=loki_handler)
+        else: 
+            self.handler = loki_handler
+
         self.listener = QueueListener(self.queue, self.handler)
         self.listener.start()
+
+    def flush(self) -> None:
+        super().flush()
+        self.handler.flush()
 
     def __del__(self):
         self.listener.stop()
@@ -33,20 +45,16 @@ class LokiHandler(logging.Handler):
     `Loki API <https://github.com/grafana/loki/blob/master/docs/api.md>`_
     """
 
-    emitters: Dict[str, Type[emitter.LokiEmitter]] = {
-        "0": emitter.LokiEmitterV0,
-        "1": emitter.LokiEmitterV1,
-    }
+    emitter: LokiEmitter
 
     def __init__(
         self,
         url: str,
         tags: Optional[dict] = None,
         headers: Optional[dict] = None,
-        auth: Optional[emitter.BasicAuth] = None,
-        version: Optional[str] = None,
+        auth: Optional[BasicAuth] = None,
         as_json: Optional[bool] = False,
-        props_to_labels: Optional[list[str]] = None
+        props_to_labels: Optional[list[str]] = None,
     ):
         """
         Create new Loki logging handler.
@@ -55,24 +63,13 @@ class LokiHandler(logging.Handler):
             url: Endpoint used to send log entries to Loki (e.g. `https://my-loki-instance/loki/api/v1/push`).
             tags: Default tags added to every log record.
             auth: Optional tuple with username and password for basic HTTP authentication.
-            version: Version of Loki emitter to use.
+            headers: Optional record with headers that are send with each POST to loki.
+            as_json: Flag to support sending entire JSON record instead of only the message.
+            props_to_labels: List of properties that sould be converted to loki labels.
 
         """
         super().__init__()
-
-        if version is None and const.emitter_ver == "0":
-            msg = (
-                "Loki /api/prom/push endpoint is in the depreciation process starting from version 0.4.0.",
-                "Explicitly set the emitter version to '0' if you want to use the old endpoint.",
-                "Or specify '1' if you have Loki version> = 0.4.0.",
-                "When the old API is removed from Loki, the handler will use the new version by default.",
-            )
-            warnings.warn(" ".join(msg), DeprecationWarning)
-
-        version = version or const.emitter_ver
-        if version not in self.emitters:
-            raise ValueError("Unknown emitter version: {0}".format(version))
-        self.emitter = self.emitters[version](url, tags, headers, auth, as_json, props_to_labels)
+        self.emitter = LokiEmitter(url, tags, headers, auth, as_json, props_to_labels)
 
     def handleError(self, record):  # noqa: N802
         """Close emitter and let default handler take actions on error."""
@@ -86,3 +83,38 @@ class LokiHandler(logging.Handler):
             self.emitter(record, self.format(record))
         except Exception:
             self.handleError(record)
+
+    def emit_batch(self, records: list[logging.LogRecord]):
+        """Send a batch of log records to Loki."""
+        # noinspection PyBroadException
+        try:
+            self.emitter.emit_batch([(record, self.format(record)) for record in records])
+        except Exception:
+            for record in records:
+                self.handleError(record)
+
+class LokiBatchHandler(MemoryHandler):
+    interval: float # The interval at which batched logs are sent in seconds
+    _last_flush_time: float
+    target: LokiHandler
+
+    def __init__(self, interval: float, capacity: int = LOKI_MAX_BATCH_BUFFER_SIZE, **kwargs):
+        super().__init__(capacity, **kwargs)
+        self.interval = interval
+        self._last_flush_time = time.time()
+
+    def flush(self) -> None:
+        self.acquire()
+        try:
+            if self.target and self.buffer:
+                self.target.emit_batch(self.buffer)
+                self.buffer.clear()
+        finally:
+            self.release()
+        self._last_flush_time = time.time()
+
+    def shouldFlush(self, record: logging.LogRecord) -> bool:
+        return (
+            super().shouldFlush(record) or 
+            (time.time() - self._last_flush_time >= self.interval)
+        )

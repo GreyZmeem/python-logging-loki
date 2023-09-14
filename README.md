@@ -1,5 +1,4 @@
-python-logging-loki
-===================
+# python-logging-loki
 
 [![PyPI version](https://img.shields.io/pypi/v/python-logging-loki.svg)](https://pypi.org/project/python-logging-loki/)
 [![Python version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue.svg)](https://www.python.org/)
@@ -9,14 +8,13 @@ python-logging-loki
 Python logging handler for Loki.  
 https://grafana.com/loki
 
-Installation
-============
+# Installation
+
 ```bash
 pip install python-logging-loki
 ```
 
-Usage
-=====
+# Usage
 
 ```python
 import logging
@@ -24,30 +22,30 @@ import logging_loki
 
 
 handler = logging_loki.LokiHandler(
-    url="https://my-loki-instance/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push",
     tags={"application": "my-app"},
     headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
-    version="1",
     props_to_labels: Optional[list[str]] = ["foo"]
 )
 
 logger = logging.getLogger("my-logger")
 logger.addHandler(handler)
 logger.error(
-    "Something happened", 
+    "Something happened",
     extra={"tags": {"service": "my-service"}},
 )
 ```
 
 Example above will send `Something happened` message along with these labels:
+
 - Default labels from handler
 - Message level as `serverity`
-- Logger's name as `logger` 
+- Logger's name as `logger`
 - Labels from `tags` item of `extra` dict
 
 The given example is blocking (i.e. each call will wait for the message to be sent).  
-But you can use the built-in `QueueHandler` and` QueueListener` to send messages in a separate thread.  
+But you can use the built-in `QueueHandler` and` QueueListener` to send messages in a separate thread.
 
 ```python
 import logging.handlers
@@ -58,11 +56,10 @@ from multiprocessing import Queue
 queue = Queue(-1)
 handler = logging.handlers.QueueHandler(queue)
 handler_loki = logging_loki.LokiHandler(
-    url="https://my-loki-instance/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push",
     tags={"application": "my-app"},
     headers={"X-Scope-OrgID": "example-id"},
     auth=("username", "password"),
-    version="1",
     props_to_labels: Optional[list[str]] = ["foo"]
 )
 logging.handlers.QueueListener(queue, handler_loki)
@@ -82,10 +79,9 @@ from multiprocessing import Queue
 
 handler = logging_loki.LokiQueueHandler(
     Queue(-1),
-    url="https://my-loki-instance/loki/api/v1/push", 
+    url="https://my-loki-instance/loki/api/v1/push",
     tags={"application": "my-app"},
     auth=("username", "password"),
-    version="1",
 )
 
 logger = logging.getLogger("my-logger")

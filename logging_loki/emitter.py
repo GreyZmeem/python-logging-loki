@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import abc
 import copy
 import functools
 import json
@@ -8,21 +7,16 @@ import logging
 import threading
 import time
 from logging.config import ConvertingDict
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import requests
-import rfc3339
 
 from logging_loki import const
 
 BasicAuth = Optional[Tuple[str, str]]
 
 
-class LokiEmitter(abc.ABC):
+class LokiEmitter:
     """Base Loki emitter class."""
 
     success_response_code = const.success_response_code
@@ -72,16 +66,16 @@ class LokiEmitter(abc.ABC):
             return
         try:
             payload = self.build_payload(record, line)
-            resp = self.session.post(self.url, json=payload, headers=self.headers)
-            if resp.status_code != self.success_response_code:
-                raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+            self._post_to_loki(payload)
         finally:
             self._lock.release()
 
-    @abc.abstractmethod
-    def build_payload(self, record: logging.LogRecord, line) -> dict:
-        """Build JSON payload with a log entry."""
-        raise NotImplementedError  # pragma: no cover
+    def _post_to_loki(self, payload: dict):
+        resp = self.session.post(self.url, json=payload, headers=self.headers)
+        # TODO: Enqueue logs instead of raising an error and losing the logs
+        if resp.status_code != self.success_response_code:
+            raise ValueError("Unexpected Loki API response status code: {0}".format(resp.status_code))
+
 
     @property
     def session(self) -> requests.Session:
@@ -127,33 +121,6 @@ class LokiEmitter(abc.ABC):
 
         return tags
 
-
-class LokiEmitterV0(LokiEmitter):
-    """Emitter for Loki < 0.4.0."""
-
-    def build_payload(self, record: logging.LogRecord, line) -> dict:
-        """Build JSON payload with a log entry."""
-        labels = self.build_labels(record)
-        ts = rfc3339.format_microsecond(record.created)
-        stream = {
-            "labels": labels,
-            "entries": [{"ts": ts, "line": line}],
-        }
-        return {"streams": [stream]}
-
-    def build_labels(self, record: logging.LogRecord) -> str:
-        """Return Loki labels string."""
-        labels: List[str] = []
-        for label_name, label_value in self.build_tags(record).items():
-            cleared_name = self.format_label(str(label_name))
-            cleared_value = str(label_value).replace('"', r"\"")
-            labels.append('{0}="{1}"'.format(cleared_name, cleared_value))
-        return "{{{0}}}".format(",".join(labels))
-
-
-class LokiEmitterV1(LokiEmitter):
-    """Emitter for Loki >= 0.4.0."""
-
     def build_payload(self, record: logging.LogRecord, line) -> dict:
         """Build JSON payload with a log entry."""
         labels = self.build_tags(record)
@@ -167,3 +134,8 @@ class LokiEmitterV1(LokiEmitter):
             "values": [[ts, line]],
         }
         return {"streams": [stream]}
+    
+    def emit_batch(self, records: list[ Tuple[logging.LogRecord, str]]):
+        """Send log record to Loki."""
+        streams = [self.build_payload(record[0], record[1])["streams"][0] for record in records]
+        self._post_to_loki({"streams": streams})

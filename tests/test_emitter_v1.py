@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from freezegun import freeze_time
 
-from logging_loki.emitter import LokiEmitterV1
+from logging_loki.emitter import LokiEmitter
 
 emitter_url: str = "https://example.net/loki/api/v1/push/"
 record_kwargs = {
@@ -24,14 +24,14 @@ record_kwargs = {
 
 
 @pytest.fixture()
-def emitter_v1() -> Tuple[LokiEmitterV1, MagicMock]:
+def emitter_v1() -> Tuple[LokiEmitter, MagicMock]:
     """Create v1 emitter with mocked http session."""
     response = MagicMock()
-    response.status_code = LokiEmitterV1.success_response_code
+    response.status_code = LokiEmitter.success_response_code
     session = MagicMock()
     session().post = MagicMock(return_value=response)
 
-    instance = LokiEmitterV1(url=emitter_url)
+    instance = LokiEmitter(url=emitter_url)
     instance.session_class = session
 
     return instance, session
@@ -166,7 +166,6 @@ def test_can_build_tags_from_converting_dict(emitter_v1):
                 "queue": Queue(-1),
                 "url": emitter_url,
                 "tags": {"test": "test"},
-                "version": "1",
             },
         },
         "loggers": {logger_name: {"handlers": [logger_name], "level": "DEBUG"}},
@@ -174,5 +173,20 @@ def test_can_build_tags_from_converting_dict(emitter_v1):
     loggingDictConfig(config)
 
     logger = logging.getLogger(logger_name)
-    emitter: LokiEmitterV1 = logger.handlers[0].handler.emitter
+    emitter: LokiEmitter = logger.handlers[0].handler.emitter
     emitter.build_tags(create_record())
+
+def test_batch_records_sent_to_emitter_url(emitter_v1):
+    emitter, session = emitter_v1
+    emitter.emit_batch([(create_record(), ""), (create_record(), "")])
+
+    got = session().post.call_args
+    assert got[0][0] == emitter_url
+
+    streams = session().post.call_args[1]["json"]["streams"]
+    expected = {
+        emitter.level_tag: logging.getLevelName(record_kwargs["level"]).lower(),
+        emitter.logger_tag: record_kwargs["name"],
+    }
+    for stream in streams:
+        assert stream["stream"] == expected

@@ -88,3 +88,24 @@ logger = logging.getLogger("my-logger")
 logger.addHandler(handler)
 logger.error(...)
 ```
+
+If Multi-tenancy is enabled then you can use following configuration
+
+
+```python
+import logging.handlers
+import logging_loki
+
+# Configuring the LokiQueueHandler with multi-tenancy enabled
+handler = logging_loki.LokiHandler(
+    url="https://my-loki-instance/loki/api/v1/push",  # Loki endpoint for log ingestion
+    tags={"application": "my-app"},  # Additional tags for log identification
+    auth=("username", "password"),  # Authentication credentials for accessing Loki
+    version="1",  # Version of the Loki API being used
+    tenant_id="som-tenant-id",  # Unique identifier for the tenant
+)
+
+logger = logging.getLogger("my-logger")
+logger.addHandler(handler)
+logger.error(...)
+```

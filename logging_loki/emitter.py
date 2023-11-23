@@ -30,7 +30,7 @@ class LokiEmitter(abc.ABC):
     label_replace_with = const.label_replace_with
     session_class = requests.Session
 
-    def __init__(self, url: str, tags: Optional[dict] = None, auth: BasicAuth = None):
+    def __init__(self, url: str, tags: Optional[dict] = None, auth: BasicAuth = None, tenant_id: Optional[str] = None):
         """
         Create new Loki emitter.
 
@@ -38,6 +38,7 @@ class LokiEmitter(abc.ABC):
             url: Endpoint used to send log entries to Loki (e.g. `https://my-loki-instance/loki/api/v1/push`).
             tags: Default tags added to every log record.
             auth: Optional tuple with username and password for basic HTTP authentication.
+            tenant_id: Optional tenant_id for multi Multi-tenancy.
 
         """
         #: Tags that will be added to all records handled by this handler.
@@ -46,6 +47,8 @@ class LokiEmitter(abc.ABC):
         self.url = url
         #: Optional tuple with username and password for basic authentication.
         self.auth = auth
+        #: Optional tenant_id for Multi-tenancy support.
+        self.tenant_id = tenant_id
 
         self._session: Optional[requests.Session] = None
 
@@ -67,6 +70,8 @@ class LokiEmitter(abc.ABC):
         if self._session is None:
             self._session = self.session_class()
             self._session.auth = self.auth or None
+            if self.tenant_id:
+                self._session.headers.update({"X-Scope-OrgID": self.tenant_id})
         return self._session
 
     def close(self):

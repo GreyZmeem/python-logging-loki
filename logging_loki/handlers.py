@@ -42,6 +42,7 @@ class LokiHandler(logging.Handler):
         tags: Optional[dict] = None,
         auth: Optional[emitter.BasicAuth] = None,
         version: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ):
         """
         Create new Loki logging handler.
@@ -67,7 +68,7 @@ class LokiHandler(logging.Handler):
         version = version or const.emitter_ver
         if version not in self.emitters:
             raise ValueError("Unknown emitter version: {0}".format(version))
-        self.emitter = self.emitters[version](url, tags, auth)
+        self.emitter = self.emitters[version](url, tags, auth, tenant_id)
 
     def handleError(self, record):  # noqa: N802
         """Close emitter and let default handler take actions on error."""

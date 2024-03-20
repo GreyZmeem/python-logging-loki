@@ -176,3 +176,4 @@ def test_can_build_tags_from_converting_dict(emitter_v1):
     logger = logging.getLogger(logger_name)
     emitter: LokiEmitterV1 = logger.handlers[0].handler.emitter
     emitter.build_tags(create_record())
+    payload = emitter.build_payload(create_record(), 10)

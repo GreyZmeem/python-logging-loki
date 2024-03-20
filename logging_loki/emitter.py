@@ -20,6 +20,9 @@ from logging_loki import const
 BasicAuth = Optional[Tuple[str, str]]
 
 
+KEYS_TO_SKIP = {'severity', 'logger', 'msg', 'message', 'tags', 'lineno'}
+
+
 class LokiEmitter(abc.ABC):
     """Base Loki emitter class."""
 
@@ -29,6 +32,17 @@ class LokiEmitter(abc.ABC):
     label_allowed_chars = const.label_allowed_chars
     label_replace_with = const.label_replace_with
     session_class = requests.Session
+
+    @staticmethod
+    def get_entry_labels(record: logging.LogRecord, line: int) -> dict:
+        labels = {}
+        for key, value in record.__dict__.items():
+            if key in KEYS_TO_SKIP:
+                continue
+            if value:
+                labels[key] = value
+        labels['line_no'] = line
+        return labels
 
     def __init__(self, url: str, tags: Optional[dict] = None, auth: BasicAuth = None):
         """
@@ -89,7 +103,6 @@ class LokiEmitter(abc.ABC):
     def build_tags(self, record: logging.LogRecord) -> Dict[str, Any]:
         """Return tags that must be send to Loki with a log record."""
         tags = dict(self.tags) if isinstance(self.tags, ConvertingDict) else self.tags
-        tags = copy.deepcopy(tags)
         tags[self.level_tag] = record.levelname.lower()
         tags[self.logger_tag] = record.name
 
@@ -99,9 +112,8 @@ class LokiEmitter(abc.ABC):
 
         for tag_name, tag_value in extra_tags.items():
             cleared_name = self.format_label(tag_name)
-            if cleared_name:
+            if cleared_name and tag_value:
                 tags[cleared_name] = tag_value
-
         return tags
 
 
@@ -138,6 +150,6 @@ class LokiEmitterV1(LokiEmitter):
         ts = str(int(time.time() * ns))
         stream = {
             "stream": labels,
-            "values": [[ts, line]],
+            "values": [[ts, line, LokiEmitter.get_entry_labels(record, line)]],
         }
         return {"streams": [stream]}

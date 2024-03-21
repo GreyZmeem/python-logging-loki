@@ -88,3 +88,67 @@ logger = logging.getLogger("my-logger")
 logger.addHandler(handler)
 logger.error(...)
 ```
+
+Adding extra callable tags
+--------------------------
+
+Having a prior definition of:
+```python
+import logging
+import logging_loki
+from multiprocessing import Queue
+from myapp.tracing import tracer
+
+get_context = lambda: tracer.active_span.context
+add_trace_id = lambda: hex(get_context().trace_id)[
+                       2:] if tracer is not None and tracer.active_span is not None else None
+add_span_id = lambda: hex(get_context().span_id)[2:] if tracer is not None and tracer.active_span else None
+```
+
+If you want to add extra span IDs or trace IDs do the following:
+
+```python
+handler = logging_loki.LokiQueueHandler(
+    Queue(-1),
+    url="https://my-loki-instance/loki/api/v1/push", 
+    tags={"application": "my-app", 'span_id': add_span_id, 'trace_id': add_trace_id},
+    auth=("username", "password"),
+    version="1"
+)
+logger = logging.getLogger("my-logger")
+logger.addHandler(handler)
+logger.error(...)
+```
+
+Basically if your callable returns a non-None value, it will be added as a tag. No casting to string will be made.
+
+You can use also the blocking approach of:
+
+```python
+handler = logging_loki.LokiHandler(
+    url="https://my-loki-instance/loki/api/v1/push", 
+    tags={"application": "my-app", "trace_id": add_trace_id, "span_id": add_span_id},
+    auth=("username", "password"),
+    version="1",
+)
+
+logger = logging.getLogger("my-logger")
+logger.addHandler(handler)
+logger.error(
+    "Something happened", 
+    extra={"tags": {"service": "my-service"}},
+)
+```
+
+Note that Loki version "0" will not support callable tags.
+
+
+Supplying extra tags
+--------------------
+
+If you want to supply extra tags, you can do it twofold:
+
+```python
+logger.error('Something happened', extra={'test': 4})
+logger.error('Something happened', extra={'tags': {'test': 4}})
+```
